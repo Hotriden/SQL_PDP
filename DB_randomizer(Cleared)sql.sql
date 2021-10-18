@@ -33,17 +33,6 @@ AS
 
 		-- Generate Truck Route --
 
-		DECLARE @Origin_city INT = (SELECT FLOOR(rand()*
-							(SELECT Count(DISTINCT CityId) FROM US_Domastic_Company.dbo.City)+1))
-		DECLARE @Destination_city INT = (SELECT FLOOR(rand()*
-							(SELECT Count(DISTINCT CityId) FROM US_Domastic_Company.dbo.City)+1))
-
-		INSERT INTO US_Domastic_Company.dbo.TruckRoute (WarehouseOrigin, WarehouseDestination, Distance) VALUES(
-			(SELECT CityId FROM US_Domastic_Company.dbo.City WHERE CityId = @Origin_city),
-			(SELECT CityId FROM US_Domastic_Company.dbo.City WHERE CityId = IIF(@Origin_city != @Destination_city, @Destination_city, 
-				(SELECT FLOOR(rand()*(SELECT Count(DISTINCT CityId) FROM US_Domastic_Company.dbo.City)+@Destination_city)))),
-			(SELECT FLOOR(rand()*(3000-100)+100))
-		);
 
 		-- Generate Users --
 
@@ -140,6 +129,19 @@ AS
 			@warehouseName,
 			@warehouseCapacity
 		)
+
+		
+		DECLARE @OriginWareHouse INT = (SELECT FLOOR(rand()*
+							(SELECT Count(DISTINCT WareHouseId) FROM US_Domastic_Company.dbo.Warehouse)+1))
+		DECLARE @DestinationWareHouse INT = (SELECT FLOOR(rand()*
+							(SELECT Count(DISTINCT WareHouseId) FROM US_Domastic_Company.dbo.Warehouse)+1))
+
+		INSERT INTO US_Domastic_Company.dbo.TruckRoute (WarehouseOrigin, WarehouseDestination, Distance) VALUES(
+			(SELECT WareHouseId FROM US_Domastic_Company.dbo.Warehouse WHERE WareHouseId = @OriginWareHouse),
+			(SELECT WareHouseId FROM US_Domastic_Company.dbo.Warehouse WHERE WareHouseId = IIF(@OriginWareHouse != @DestinationWareHouse, @DestinationWareHouse, 
+				(SELECT FLOOR(rand()*(SELECT Count(DISTINCT CityId) FROM US_Domastic_Company.dbo.City)+@DestinationWareHouse)))),
+			(SELECT FLOOR(rand()*(3000-100)+100))
+		);
 
 		-- Generate truck driver --
 		DECLARE @truckDriverFirstName NVARCHAR(20) = 
@@ -257,7 +259,17 @@ GO
 EXEC spDataRandomizer @Iteration = 100
 
 CREATE OR ALTER VIEW vShipmentSearch AS 
-	SELECT OriginCity, DestinationCity, TruckBrand, DateTimeShipmentStarted, DateTimeShipmentCompleted, TotalWeightAllShipmentCargo, TotalVolume, FuelSpent(Distance*FuelCons/100) FROM 
-	[US_Domastic_Company].[dbo].[Shipment] as shipment, [US_Domastic_Company].[dbo].[ShipmentFlight] as shipFlight, [US_Domastic_Company].[dbo].[TruckRoute] as truckRoute,
-	[US_Domastic_Company].[dbo].[WareHouse] as wareHouse, [US_Domastic_Company].[dbo].[City] as city, [US_Domastic_Company].[dbo].[Truck] as truck, 
-	[US_Domastic_Company].[dbo].[Cargo_Shipment] as cargoShipment, [US_Domastic_Company].[dbo].[Cargo] as cargo 
+	SELECT shipment.ShipmentId as Id, cityOrigin.Name as Origin, cityDestination.Name as DestinationCity, truck.BrandName as TruckBrand, shipment.PickUpTime as DateTimeShipmentStarted, 
+		shipment.ReceiptTime as DateTimeShipmentCompleted, shipment.ShipmentWeight as TotalWeightAllShipmentCargo, shipment.ShipmentVolume as TotalVolum, 
+		truckRoute.Distance*truck.FuelConsumption/100 as FuelSpent FROM [US_Domastic_Company].[dbo].[Shipment] as shipment 
+			LEFT JOIN [US_Domastic_Company].[dbo].ShipmentFlight as shipFlight ON shipment.ShipmentId = shipFlight.ShipmentId
+			LEFT JOIN [US_Domastic_Company].[dbo].TruckRoute as truckRoute ON shipFlight.TruckRouteId = truckRoute.TruckRouteId
+			LEFT JOIN [US_Domastic_Company].[dbo].Warehouse as wareHouseOrigin ON truckRoute.WarehouseOrigin = wareHouseOrigin.CityId
+			LEFT JOIN [US_Domastic_Company].[dbo].Warehouse as wareHouseDestination ON truckRoute.WarehouseDestination = wareHouseDestination.CityId
+			LEFT JOIN [US_Domastic_Company].[dbo].City as cityOrigin ON wareHouseOrigin.CityId = cityOrigin.CityId
+			LEFT JOIN [US_Domastic_Company].[dbo].City as cityDestination ON wareHouseDestination.CityId = cityDestination.CityId
+			LEFT JOIN [US_Domastic_Company].[dbo].Truck as truck ON shipFlight.TruckId = truck.TruckId
+			LEFT JOIN [US_Domastic_Company].[dbo].Cargo_Shipment as cargoShipment ON shipment.ShipmentId = cargoShipment.ShipmentId
+			LEFT JOIN [US_Domastic_Company].[dbo].Cargo as cargo ON cargoShipment.CargoId = cargo.CargoId
+	
+SELECT TOP(100) * FROM vShipmentSearch
