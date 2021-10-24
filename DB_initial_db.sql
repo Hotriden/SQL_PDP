@@ -154,6 +154,36 @@ IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'Truck' and xtype='U')
 	);
 	END
 
+	
+IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'RecipientContactInformation' and xtype='U')
+	BEGIN
+	CREATE TABLE [dbo].[RecipientContactInformation](
+		[RecipientContactInfoId]	BIGINT			NOT NULL  IDENTITY(1,1),
+		[ShipmentId]				BIGINT			NULL,
+		[FirstName]					NVARCHAR (50)	NOT NULL,
+		[LastName]					NVARCHAR (50)	NULL,
+		[ContactCellPhone]			NVARCHAR (15)	NOT NULL,
+
+		CONSTRAINT [PK_RecipientContactInfo_1] PRIMARY KEY CLUSTERED ([RecipientContactInfoId] ASC) WITH (FILLFACTOR = 80)
+	);
+	END
+	
+IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'ShipmentFlight' and xtype='U')
+	BEGIN
+	CREATE TABLE [dbo].[ShipmentFlight](
+		[ShipmentFlightId]			BIGINT			NOT NULL IDENTITY(1,1),
+		[TruckId]					BIGINT			NULL,
+		[TruckDriverId]				BIGINT			NULL,
+		[ShipmentId]				BIGINT			NULL,
+		[TruckRouteId]				BIGINT			NULL
+	
+	CONSTRAINT	[PK_ShipmentFlightId] PRIMARY KEY CLUSTERED ([ShipmentFlightId] ASC) WITH (FILLFACTOR = 80)
+	CONSTRAINT  [FK_ShipmentFlight_TruckId]		  FOREIGN KEY (TruckId)		  REFERENCES [dbo].[Truck] (TruckId),
+	CONSTRAINT  [FK_ShipmentFlight_TruckDriverId] FOREIGN KEY (TruckDriverId) REFERENCES [dbo].[TruckDriver] (TruckDriverId),
+	CONSTRAINT  [FK_ShipmentFlight_TruckRouteId]  FOREIGN KEY (TruckRouteId)  REFERENCES [dbo].[TruckRoute] (TruckRouteId)
+	);
+	END
+
 IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'Shipment' and xtype='U')
 	BEGIN
 	CREATE TABLE [dbo].[Shipment](
@@ -168,10 +198,13 @@ IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'Shipment' and xtype='U')
 		[ShipmentDetails]			NVARCHAR(500)	NULL,
 		[CreationTime]				DATETIME		NULL,
 		[PickUpTime]				DATETIME		NULL,
-		[ReceiptTime]				DATETIME		NULL
+		[ReceiptTime]				DATETIME		NULL,
+		[ShipmentFlightId]			BIGINT			NULL,
 
-		CONSTRAINT [PK_Shipment_1] PRIMARY KEY CLUSTERED ([ShipmentId] ASC) WITH (FILLFACTOR = 80),
-		CONSTRAINT [FK_Shipment_to_Customer]	FOREIGN KEY (CustomerId)	REFERENCES [dbo].[Customer] (CustomerId)
+		CONSTRAINT [PK_Shipment_1]				 PRIMARY KEY CLUSTERED ([ShipmentId] ASC) WITH (FILLFACTOR = 80),
+		CONSTRAINT [FK_Shipment_to_Customer]	 FOREIGN KEY (CustomerId)	REFERENCES [dbo].[Customer] (CustomerId),
+		CONSTRAINT [FK_Shipment_to_ShipmentInfo] FOREIGN KEY (RecipientInformationId) REFERENCES [dbo].[RecipientContactInformation] (RecipientContactInfoId) ON UPDATE CASCADE ON DELETE CASCADE,
+		CONSTRAINT [FK_Shipment_to_ShipmentFlight] FOREIGN KEY (ShipmentFlightId) REFERENCES [dbo].[ShipmentFlight] (ShipmentFlightId) ON UPDATE CASCADE ON DELETE CASCADE
 	);
 	END
 
@@ -182,40 +215,11 @@ IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'Cargo_Shipment' and xtype='
 		[ShipmentId]                   BIGINT          NOT NULL,
 
 		CONSTRAINT [PK_cargoShipment_to_cargo] FOREIGN KEY (CargoId) REFERENCES [dbo].[Cargo] (CargoId) ON UPDATE CASCADE ON DELETE CASCADE,
-		CONSTRAINT [PK_cargoShipment_to_shipment] FOREIGN KEY (ShipmentId) REFERENCES [dbo].[Shipment] (ShipmentId) ON UPDATE CASCADE ON DELETE CASCADE 
+		CONSTRAINT [PK_cargoShipment_to_shipment] FOREIGN KEY (ShipmentId) REFERENCES [dbo].[Shipment] (ShipmentId) ON UPDATE CASCADE ON DELETE CASCADE
 	);
 	END
 
-IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'RecipientContactInformation' and xtype='U')
-	BEGIN
-	CREATE TABLE [dbo].[RecipientContactInformation](
-		[RecipientContactInfoId]	BIGINT			NOT NULL  IDENTITY(1,1),
-		[ShipmentId]				BIGINT			NOT NULL,
-		[FirstName]					NVARCHAR (50)	NOT NULL,
-		[LastName]					NVARCHAR (50)	NULL,
-		[ContactCellPhone]			NVARCHAR (15)	NOT NULL,
 
-		CONSTRAINT [PK_RecipientContactInfo_1] PRIMARY KEY CLUSTERED ([RecipientContactInfoId] ASC) WITH (FILLFACTOR = 80),
-		CONSTRAINT [FK_RecipientContactInfo_to_shipment] FOREIGN KEY (ShipmentId) REFERENCES [dbo].[Shipment] (ShipmentId)
-	);
-	END
-
-IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'ShipmentFlight' and xtype='U')
-	BEGIN
-	CREATE TABLE [dbo].[ShipmentFlight](
-		[ShipmentFlightId]			BIGINT			NOT NULL IDENTITY(1,1),
-		[TruckId]					BIGINT			NULL,
-		[TruckDriverId]				BIGINT			NULL,
-		[ShipmentId]				BIGINT			NOT NULL,
-		[TruckRouteId]				BIGINT			NULL
-	
-	CONSTRAINT	[PK_ShipmentFlightId] PRIMARY KEY CLUSTERED ([ShipmentFlightId] ASC) WITH (FILLFACTOR = 80)
-	CONSTRAINT  [FK_ShipmentFlight_TruckId]		  FOREIGN KEY (TruckId)		  REFERENCES [dbo].[Truck] (TruckId),
-	CONSTRAINT  [FK_ShipmentFlight_TruckDriverId] FOREIGN KEY (TruckDriverId) REFERENCES [dbo].[TruckDriver] (TruckDriverId),
-	CONSTRAINT  [FK_ShipmentFlight_ShipmentId]	  FOREIGN KEY (ShipmentId)	  REFERENCES [dbo].[Shipment] (ShipmentId),
-	CONSTRAINT  [FK_ShipmentFlight_TruckRouteId]  FOREIGN KEY (TruckRouteId)  REFERENCES [dbo].[TruckRoute] (TruckRouteId)
-	);
-	END
 
 IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'CargoList' and xtype='U')
 	BEGIN
@@ -236,4 +240,3 @@ IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'TruckBrand' and xtype='U')
 	BEGIN
 	CREATE TABLE dbo.TruckBrand (Id INT NOT NULL IDENTITY(1,1) PRIMARY KEY, TruckBrandName Nvarchar(30))
 	END
-
