@@ -224,17 +224,15 @@ AS
 			(DATEADD(SECOND, 
 				ROUND(((
 					datediff(second, '2021-01-01 00:00:00', '2021-10-10 12:30:00')-1) * RAND()), 0), '2021-01-01 00:00:00'))
-		DECLARE @shipmentPickUpTime DATETIME = 
-			(DATEADD(SECOND, 
-				ROUND(((
-					datediff(second, '2021-01-01 00:00:00', '2021-10-10 12:30:00')-1) * RAND()), 0), '2021-01-01 00:00:00'))
+		DECLARE @shipmentCompleteTime DATETIME = DATEADD(day, 7, @shipmentCreationTime)
+		DECLARE @shipmentPickUpTime DATETIME = DATEADD(day, (CRYPT_GEN_RANDOM(1) % 2), @shipmentCreationTime)
 		DECLARE @shipmentContactInfoId BIGINT =
 			(SELECT TOP 1 RecipientContactInfoId AS Id FROM [US_Domastic_Company].[dbo].[RecipientContactInformation] 
 					WHERE US_Domastic_Company.dbo.RecipientContactInformation.ShipmentId IS NULL)
 		DECLARE @shipmentFlight BIGINT =
 			(SELECT TOP 1 ShipmentFlightId AS Id FROM [US_Domastic_Company].[dbo].[ShipmentFlight] ORDER BY Id DESC)
 
-		INSERT INTO US_Domastic_Company.dbo.Shipment (BOL, RecipientInformationId, ProNumber, CustomerId, ShipmentVolume, ShipmentWeight, IsHazard, ShipmentDetails, CreationTime, PickUpTime, ShipmentFlightId)
+		INSERT INTO US_Domastic_Company.dbo.Shipment (BOL, RecipientInformationId, ProNumber, CustomerId, ShipmentVolume, ShipmentWeight, IsHazard, ShipmentDetails, CreationTime, ReceiptTime, PickUpTime, ShipmentFlightId)
 			VALUES(
 				@shipmentBOL,
 				@shipmentContactInfoId,
@@ -245,6 +243,7 @@ AS
 				@shipmentIsHazard,
 				@shipmentDetails,
 				@shipmentCreationTime,
+				@shipmentCompleteTime,
 				@shipmentPickUpTime,
 				@shipmentFlight
 			)
@@ -269,29 +268,57 @@ GO
 
 EXEC spDataRandomizer @Iteration = 100
 
+-- VIEW Task 1 -- 
 CREATE OR ALTER VIEW vShipmentSearch AS 
-	SELECT shipment.ShipmentId as Id, cityOrigin.Name as Origin, cityDestination.Name as DestinationCity, truck.BrandName as TruckBrand, shipment.PickUpTime as DateTimeShipmentStarted, 
-		shipment.ReceiptTime as DateTimeShipmentCompleted, shipment.ShipmentWeight as TotalWeightAllShipmentCargo, shipment.ShipmentVolume as TotalVolum, 
-		truckRoute.Distance*truck.FuelConsumption/100 as FuelSpent FROM [US_Domastic_Company].[dbo].[Shipment] as shipment 
-			LEFT JOIN [US_Domastic_Company].[dbo].ShipmentFlight as shipFlight ON shipment.ShipmentId = shipFlight.ShipmentId
-			LEFT JOIN [US_Domastic_Company].[dbo].TruckRoute as truckRoute ON shipFlight.TruckRouteId = truckRoute.TruckRouteId
-			LEFT JOIN [US_Domastic_Company].[dbo].Warehouse as wareHouseOrigin ON truckRoute.WarehouseOrigin = wareHouseOrigin.CityId
-			LEFT JOIN [US_Domastic_Company].[dbo].Warehouse as wareHouseDestination ON truckRoute.WarehouseDestination = wareHouseDestination.CityId
-			LEFT JOIN [US_Domastic_Company].[dbo].City as cityOrigin ON wareHouseOrigin.CityId = cityOrigin.CityId
-			LEFT JOIN [US_Domastic_Company].[dbo].City as cityDestination ON wareHouseDestination.CityId = cityDestination.CityId
-			LEFT JOIN [US_Domastic_Company].[dbo].Truck as truck ON shipFlight.TruckId = truck.TruckId
-			LEFT JOIN [US_Domastic_Company].[dbo].Cargo_Shipment as cargoShipment ON shipment.ShipmentId = cargoShipment.ShipmentId
-			LEFT JOIN [US_Domastic_Company].[dbo].Cargo as cargo ON cargoShipment.CargoId = cargo.CargoId
-
-CREATE OR ALTER VIEW vShipmentSearchtest AS 
-	SELECT shipment.ShipmentId as Id, originCity.Name as OriginCity, destinationCity.Name as DestinationCity
+	SELECT shipment.ShipmentId as Id, originCity.Name as OriginCity, destinationCity.Name as DestinationCity, truck.BrandName as TruckBrandName, shipment.PickUpTime as DateTimeShipmentStarted,
+	shipment.ReceiptTime as DateTimeShipmentCompleted, shipment.ShipmentWeight TotalWeightAllShipmentCargo, shipment.ShipmentVolume as TotalVolum, 
+	truckRoute.Distance*truck.FuelConsumption/100 as FuelSpent
 		FROM [US_Domastic_Company].[dbo].[Shipment] as shipment
 		LEFT JOIN [US_Domastic_Company].[dbo].[ShipmentFlight] as shipmentFlight ON shipment.ShipmentId = shipmentFlight.ShipmentId
+		LEFT JOIN [US_Domastic_Company].[dbo].[Truck] as truck ON truck.TruckId = shipmentFlight.TruckId
 		LEFT JOIN [US_Domastic_Company].[dbo].[TruckRoute] as truckRoute ON shipmentFlight.TruckRouteId = truckRoute.TruckRouteId
 		LEFT JOIN [US_Domastic_Company].[dbo].[Warehouse] as originWareHouse ON truckRoute.WarehouseOrigin = originWareHouse.WarehouseId
 		LEFT JOIN [US_Domastic_Company].[dbo].[Warehouse] as destinationWareHouse ON truckRoute.WarehouseDestination = destinationWareHouse.WarehouseId
 		LEFT JOIN [US_Domastic_Company].[dbo].[City] as originCity ON originWareHouse.CityId = originCity.CityId
 		LEFT JOIN [US_Domastic_Company].[dbo].[City] as destinationCity ON destinationWareHouse.CityId = destinationCity.CityId
-			
 
-SELECT TOP(100) * FROM vShipmentSearchtest ORDER BY Id
+SELECT TOP(100) * FROM vShipmentSearch ORDER BY Id
+
+-- CTE Task 1 without recursion --
+
+;WITH CTE_shipmentSearch AS 
+	(SELECT shipment.ShipmentId as Id, originCity.Name as OriginCity, destinationCity.Name as DestinationCity, truck.BrandName as TruckBrandName, shipment.PickUpTime as DateTimeShipmentStarted,
+	shipment.ReceiptTime as DateTimeShipmentCompleted, shipment.ShipmentWeight TotalWeightAllShipmentCargo, shipment.ShipmentVolume as TotalVolum, 
+	truckRoute.Distance*truck.FuelConsumption/100 as FuelSpent
+		FROM [US_Domastic_Company].[dbo].[Shipment] as shipment
+		LEFT JOIN [US_Domastic_Company].[dbo].[ShipmentFlight] as shipmentFlight ON shipment.ShipmentId = shipmentFlight.ShipmentId
+		LEFT JOIN [US_Domastic_Company].[dbo].[Truck] as truck ON truck.TruckId = shipmentFlight.TruckId
+		LEFT JOIN [US_Domastic_Company].[dbo].[TruckRoute] as truckRoute ON shipmentFlight.TruckRouteId = truckRoute.TruckRouteId
+		LEFT JOIN [US_Domastic_Company].[dbo].[Warehouse] as originWareHouse ON truckRoute.WarehouseOrigin = originWareHouse.WarehouseId
+		LEFT JOIN [US_Domastic_Company].[dbo].[Warehouse] as destinationWareHouse ON truckRoute.WarehouseDestination = destinationWareHouse.WarehouseId
+		LEFT JOIN [US_Domastic_Company].[dbo].[City] as originCity ON originWareHouse.CityId = originCity.CityId
+		LEFT JOIN [US_Domastic_Company].[dbo].[City] as destinationCity ON destinationWareHouse.CityId = destinationCity.CityId
+		)
+		SELECT TOP(100) * FROM CTE_shipmentSearch
+
+-- CROSS APPLY -- 
+
+SELECT TOP 100 shipment.ShipmentId as Id, cityOrigin.Name as OriginCity, cityDest.Name as DestinationCity, truck.BrandName as TruckBrandName, shipment.PickUpTime as DateTimeShipmentStarted,
+	shipment.ReceiptTime as DateTimeShipmentCompleted, shipment.ShipmentWeight TotalWeightAllShipmentCargo, shipment.ShipmentVolume as TotalVolum, 
+	truckRoute.Distance*truck.FuelConsumption/100 as FuelSpent
+		FROM [US_Domastic_Company].[dbo].[Shipment] as shipment
+		CROSS APPLY (
+			SELECT ShipmentId, ShipmentFlightId, TruckId, TruckRouteId FROM [US_Domastic_Company].[dbo].[ShipmentFlight] as shipmentFlight WHERE shipment.ShipmentId = shipmentFlight.ShipmentId) as SF 
+			CROSS APPLY (
+				SELECT TruckId, BrandName, FuelConsumption FROM [US_Domastic_Company].[dbo].[Truck] as truck where SF.TruckId = truck.TruckId) truck
+			CROSS APPLY (
+				SELECT TruckRouteId, WarehouseOrigin, WarehouseDestination, Distance FROM [US_Domastic_Company].[dbo].[TruckRoute] as truckRoute WHERE SF.TruckRouteId = truckRoute.TruckRouteId) truckRoute
+				CROSS APPLY (
+					SELECT WarehouseId, CityId FROM [US_Domastic_Company].[dbo].[Warehouse] as wareHouse where truckRoute.WarehouseOrigin = wareHouse.WarehouseId) wareHouseOrigin
+					CROSS APPLY (
+						SELECT CityId, Name FROM [US_Domastic_Company].[dbo].[City] as city where wareHouseOrigin.CityId = city.CityId) cityOrigin
+				CROSS APPLY (
+					SELECT WarehouseId, CityId FROM [US_Domastic_Company].[dbo].[Warehouse] as wareHouse where truckRoute.WarehouseDestination = wareHouse.WarehouseId) wareHouseDest
+					CROSS APPLY (
+						SELECT CityId, Name FROM [US_Domastic_Company].[dbo].[City] as city where wareHouseDest.CityId = city.CityId) cityDest
+		ORDER BY Id
