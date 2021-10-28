@@ -137,9 +137,13 @@ IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'TruckDriver' and xtype='U')
 		[ContactCellPhone]			  NVARCHAR(15)    NOT NULL,	
 		[DriverUDN]		              NVARCHAR(20)    NOT NULL,
 
+		[DriverInfoJSON]			  NVARCHAR(MAX)   NULL,
+
 		CONSTRAINT [PK_TruckDriver_1] PRIMARY KEY CLUSTERED ([TruckDriverId] ASC) WITH (FILLFACTOR = 80),
+		CONSTRAINT [Content should be formatted as JSON] CHECK ( ISJSON(DriverInfoJSON)>0),
 	);
 	END
+
 IF NOT EXISTS(SELECT * FROM sysobjects WHERE name = 'Truck' and xtype='U')
 	BEGIN
 	CREATE TABLE [dbo].[Truck](

@@ -163,9 +163,19 @@ AS
 				'-', LEFT(ABS(CAST(CAST(NEWID() AS VARBINARY) AS INT)), 3), 
 				'-', LEFT(ABS(CAST(CAST(NEWID() AS VARBINARY) AS INT)), 4))
 		DECLARE @truckDriverUDN NVARCHAR(9) = 'UDN' + CONVERT(NVARCHAR(4) ,FLOOR(rand()*9999+1)) + (SELECT CHAR((rand()*25 + 65))+char((rand()*25 + 65)))
+		DECLARE @truckDriverInfoJSON NVARCHAR(MAX) = 
+			N'{
+				"id": 1,
+				"data":
+				{
+					"PersonalData": { "Age": 20, "Sex": "Male" },
+					"BankAccount": "Privat Bank",
+					"QualificationLevel": { "A": true, "B": true, "C": false, "D": false }
+				}
+			}'
 
-		INSERT INTO US_Domastic_Company.dbo.TruckDriver (DriverFirstName, DriverSurName, ContactCellPhone, DriverUDN) VALUES 
-			(@truckDriverFirstName, @truckDriverSurName, @truckDriverPhone, @truckDriverUDN)
+		INSERT INTO US_Domastic_Company.dbo.TruckDriver (DriverFirstName, DriverSurName, ContactCellPhone, DriverUDN, DriverInfoJSON) VALUES 
+			(@truckDriverFirstName, @truckDriverSurName, @truckDriverPhone, @truckDriverUDN, @truckDriverInfoJSON)
 
 
 		-- Generate truck --

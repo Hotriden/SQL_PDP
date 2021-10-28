@@ -43,3 +43,8 @@ BEGIN
 END
 
 EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Nathe';
+
+
+-- SEARCH JSON FROM FIELD --
+SELECT JSON_VALUE(DriverInfoJSON, '$.data.PersonalData.Age') as Age
+	FROM US_Domastic_Company.dbo.TruckDriver
