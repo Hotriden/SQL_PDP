@@ -48,3 +48,12 @@ EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Nathe';
 -- SEARCH JSON FROM FIELD --
 SELECT JSON_VALUE(DriverInfoJSON, '$.data.PersonalData.Age') as Age
 	FROM US_Domastic_Company.dbo.TruckDriver
+
+-- Task 2 --
+-- Insert into table duplicated values --
+INSERT INTO [US_Domastic_Company].[dbo].[Truck] (BrandName, PlateNumber, Payload, FuelConsumption, CargoVolume) VALUES ('MAN', '1ABC234', 17500, 20, 95)
+-- Get Count of duplicated plate numbers --
+SELECT COUNT(*) FROM [US_Domastic_Company].[dbo].[Truck] GROUP BY PlateNumber HAVING COUNT(*) > 1
+-- Get rid of duplicated plate numbers from tail --
+DELETE T FROM (SELECT * , DupRank = ROW_NUMBER() OVER (PARTITION BY PlateNumber ORDER BY TruckId)
+	FROM [US_Domastic_Company].[dbo].[Truck]) AS T WHERE DupRank > 1
