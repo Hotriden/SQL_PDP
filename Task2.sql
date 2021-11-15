@@ -57,18 +57,19 @@ INSERT INTO [US_Domastic_Company].[dbo].[Truck] (BrandName, PlateNumber, Payload
 SELECT COUNT(*) FROM [US_Domastic_Company].[dbo].[Truck] GROUP BY PlateNumber HAVING COUNT(*) > 1
 -- Get rid of duplicated plate numbers from tail --
 DELETE T FROM (SELECT * , DupRank = ROW_NUMBER() OVER (PARTITION BY PlateNumber ORDER BY TruckId)
-	FROM [US_Domastic_Company].[dbo].[Truck]) AS T WHERE DupRank > 1
+	FROM [US_Domastic_Company].[dbo].[Truck] (NOLOCK)) AS T WHERE DupRank > 1
 
--- Task 3 --
-CREATE OR ALTER PROCEDURE spGetDriverDataByXML @XCriteria as XML
+-- Task 3 -- XML
+
+CREATE OR ALTER PROCEDURE spGetDriverDataByXML (@XCriteria as XML)
 AS
 BEGIN
-	DECLARE @SQL VARCHAR(MAX)
-
-	SET @SQL = 'SELECT DriverFirstName as FirstName, DriverSurName as LastName, DriverUDN as UDN FROM US_Domastic_Company.dbo.TruckDriver 
-		WHERE @XCriteria.value(' + 'truckDriverId' + ', ROOT ' + ('driverPersonalInfo')
-    PRINT(@SQL)
-	EXEC(@SQL)	
+	SET NOCOUNT ON
+	SELECT TruckDriverId as Id, DriverFirstName as FirstName, DriverSurName as LastName, DriverUDN as UDN 
+		FROM US_Domastic_Company.dbo.TruckDriver soh (NOLOCK) 
+			INNER JOIN
+				(SELECT 'DriverId' = x.v.value('truckDriverId[1]', 'INT')
+					FROM @XCriteria.nodes('/driverdata/driverPersonalInfo') x(v)) as x on soh.TruckDriverId = x.DriverId
 END
 
 --- XML FILE EXAMPLE
@@ -96,3 +97,44 @@ SET @XMLExample = '<?xml version="1.0" encoding="UTF-8"?>
 </driverdata>'
 
 EXEC spGetDriverDataByXML @XCriteria = @XMLExample
+
+-- Task 3 -- JSON
+
+
+CREATE OR ALTER PROCEDURE spGetDriverDataByJSON @JCriteria nvarchar(max)
+AS
+BEGIN
+	SET NOCOUNT ON
+	SELECT TruckDriverId as Id, DriverFirstName as FirstName, DriverSurName as LastName, DriverUDN as UDN
+		FROM US_Domastic_Company.dbo.TruckDriver soh (NOLOCK)
+			WHERE soh.TruckDriverId IN (SELECT * FROM OPENJSON(@JCriteria) WITH (id INT '$.driverPersonalInfo.truckDriverId'))
+END
+
+DECLARE @JSONExample NVARCHAR(MAX)
+SET @JSONExample = N'[
+    {
+	"driverPersonalInfo": 
+		{
+		"truckDriverId": "112",
+		"driverFirstName": "Jannet",
+		"driverSurName": "Teske",
+		"driverUdn": "UDN3176CV"
+		},
+	"driverPersonalInfo":
+	  {
+		"truckDriverId": "113",
+		"driverFirstName": "Fonda",
+		"driverSurName": "Mull",
+		"driverUdn": "UDN4817RI"
+	  },
+	"driverPersonalInfo":
+	  {
+		"truckDriverId": "114",
+		"driverFirstName": "Laverna",
+		"driverSurName": "Hugel",
+		"driverUdn": "UDN7157RX"
+	  }
+	}
+]'
+
+EXEC spGetDriverDataByJSON @JCriteria = @JSONExample
