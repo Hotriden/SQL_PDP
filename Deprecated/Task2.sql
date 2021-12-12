@@ -11,7 +11,7 @@ BEGIN
 	EXEC(@SQL)	
 END
 
-EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Caravella';
+EXEC spGetDriverData @FieldName = 'DriverFirstName', @FieldValue = 'Detra';
 
 -- Dynamic string implementation --
 
@@ -21,13 +21,14 @@ DECLARE @firstParam NVARCHAR(50);
 DECLARE @secondParam NVARCHAR(50);
 
 SET @firstParam = 'DriverSurName';
-SET @secondParam = '''Caravella''';
-SET @ParamDefinition = N'@FieldName NVARCHAR(500), @FieldValue NVARCHAR(500)'
+SET @secondParam = 'Caravella';
+SET @ParamDefinition = N'@FieldValue NVARCHAR(500)'
 
 SET @SqlString = N'SELECT DriverFirstName as FirstName, DriverSurName as LastName, DriverUDN as UDN FROM US_Domastic_Company.dbo.TruckDriver 
-				WHERE '+@FieldName + ' = ' + @FieldValue;
+				WHERE @FieldName = ''@FieldValue'''
+PRINT(@SqlString)
 
-exec sp_executesql @SqlString, @ParamDefinition, @FieldName=@firstParam, @FieldValue=@secondParam
+exec sp_executesql @SqlString, @ParamDefinition, @firstParam, @secondParam
 
 -----------------------------
 
@@ -43,7 +44,7 @@ BEGIN
 	EXEC(@SQL)	
 END
 
-EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Nathe';
+EXEC spGetDriverData @FieldName = 'DriverFirstName', @FieldValue = 'Detra';
 
 
 -- SEARCH JSON FROM FIELD --
@@ -113,27 +114,27 @@ END
 DECLARE @JSONExample NVARCHAR(MAX)
 SET @JSONExample = N'[
     {
-	"driverPersonalInfo": 
+		"driverPersonalInfo": 
 		{
-		"truckDriverId": "112",
-		"driverFirstName": "Jannet",
-		"driverSurName": "Teske",
-		"driverUdn": "UDN3176CV"
+			"truckDriverId": "112",
+			"driverFirstName": "Jannet",
+			"driverSurName": "Teske",
+			"driverUdn": "UDN3176CV"
 		},
-	"driverPersonalInfo":
-	  {
-		"truckDriverId": "113",
-		"driverFirstName": "Fonda",
-		"driverSurName": "Mull",
-		"driverUdn": "UDN4817RI"
-	  },
-	"driverPersonalInfo":
-	  {
-		"truckDriverId": "114",
-		"driverFirstName": "Laverna",
-		"driverSurName": "Hugel",
-		"driverUdn": "UDN7157RX"
-	  }
+		"driverPersonalInfo":
+		{
+			"truckDriverId": "113",
+			"driverFirstName": "Fonda",
+			"driverSurName": "Mull",
+			"driverUdn": "UDN4817RI"
+		},
+		"driverPersonalInfo":
+		{
+			"truckDriverId": "114",
+			"driverFirstName": "Laverna",
+			"driverSurName": "Hugel",
+			"driverUdn": "UDN7157RX"
+		}
 	}
 ]'
 
