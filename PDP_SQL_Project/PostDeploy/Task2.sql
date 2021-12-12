@@ -11,23 +11,21 @@ BEGIN
 	EXEC(@SQL)	
 END
 
-EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Caravella';
+EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Cooter';
 
 -- Dynamic string implementation --
 
 DECLARE @SqlString NVARCHAR(MAX);
-DECLARE @ParamDefinition NVARCHAR(500);
 DECLARE @firstParam NVARCHAR(50);
 DECLARE @secondParam NVARCHAR(50);
-
 SET @firstParam = 'DriverSurName';
-SET @secondParam = '''Caravella''';
-SET @ParamDefinition = N'@FieldName NVARCHAR(500), @FieldValue NVARCHAR(500)'
+SET @secondParam = '''Cooter''';
 
 SET @SqlString = N'SELECT DriverFirstName as FirstName, DriverSurName as LastName, DriverUDN as UDN FROM US_Domastic_Company.dbo.TruckDriver 
-				WHERE '+@FieldName + ' = ' + @FieldValue;
+				WHERE ' + @firstParam + ' = ' + @secondParam;
 
-exec sp_executesql @SqlString, @ParamDefinition, @FieldName=@firstParam, @FieldValue=@secondParam
+PRINT(@SqlString)
+exec sp_executesql @SqlString, N'@firstParam NVARCHAR(50), @secondParam NVARCHAR(50)', @firstParam, @secondParam
 
 -----------------------------
 
@@ -43,7 +41,7 @@ BEGIN
 	EXEC(@SQL)	
 END
 
-EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Nathe';
+EXEC spGetDriverData @FieldName = 'DriverSurName', @FieldValue = 'Cooter';
 
 
 -- SEARCH JSON FROM FIELD --
@@ -77,22 +75,22 @@ DECLARE @XMLExample as XML
 SET @XMLExample = '<?xml version="1.0" encoding="UTF-8"?>
 <driverdata>
   <driverPersonalInfo>
-    <truckDriverId>112</truckDriverId>
-    <driverFirstName>Jannet</driverFirstName>
-    <driverSurName>Teske</driverSurName>
-    <driverUdn>UDN3176CV</driverUdn>
+    <truckDriverId>1</truckDriverId>
+    <driverFirstName>Racquel</driverFirstName>
+    <driverSurName>Scheer</driverSurName>
+    <driverUdn>UDN158DC</driverUdn>
   </driverPersonalInfo>
   <driverPersonalInfo>
-    <truckDriverId>113</truckDriverId>
-    <driverFirstName>Fonda</driverFirstName>
-    <driverSurName>Mull</driverSurName>
-    <driverUdn>UDN4817RI</driverUdn>
+    <truckDriverId>2</truckDriverId>
+    <driverFirstName>Robbie</driverFirstName>
+    <driverSurName>Allin</driverSurName>
+    <driverUdn>UDN6140QD</driverUdn>
   </driverPersonalInfo>
   <driverPersonalInfo>
-    <truckDriverId>114</truckDriverId>
-    <driverFirstName>Laverna</driverFirstName>
-    <driverSurName>Hugel</driverSurName>
-    <driverUdn>UDN7157RX</driverUdn>
+    <truckDriverId>3</truckDriverId>
+    <driverFirstName>Nancie</driverFirstName>
+    <driverSurName>Rasual</driverSurName>
+    <driverUdn>UDN7544SI</driverUdn>
   </driverPersonalInfo>
 </driverdata>'
 
@@ -115,24 +113,24 @@ SET @JSONExample = N'[
     {
 	"driverPersonalInfo": 
 		{
-		"truckDriverId": "112",
-		"driverFirstName": "Jannet",
-		"driverSurName": "Teske",
-		"driverUdn": "UDN3176CV"
+		"truckDriverId": "1",
+		"driverFirstName": "Racquel",
+		"driverSurName": "Scheer",
+		"driverUdn": "UDN158DC"
 		},
 	"driverPersonalInfo":
 	  {
-		"truckDriverId": "113",
-		"driverFirstName": "Fonda",
-		"driverSurName": "Mull",
-		"driverUdn": "UDN4817RI"
+		"truckDriverId": "2",
+		"driverFirstName": "Robbie",
+		"driverSurName": "Allin",
+		"driverUdn": "UDN6140QD"
 	  },
 	"driverPersonalInfo":
 	  {
-		"truckDriverId": "114",
-		"driverFirstName": "Laverna",
-		"driverSurName": "Hugel",
-		"driverUdn": "UDN7157RX"
+		"truckDriverId": "3",
+		"driverFirstName": "Nancie",
+		"driverSurName": "Rasual",
+		"driverUdn": "UDN7544SI"
 	  }
 	}
 ]'
